@@ -1,0 +1,43 @@
+name: Semgrep Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep-scan:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep (text output)
+        run: semgrep ci --config auto || true
+        env:
+          SEMGREP_RULES: >-
+            p/default
+            p/security-audit
+            p/secrets
+
+      - name: Run Semgrep (SARIF)
+        run: semgrep ci --sarif --output=semgrep-results.sarif --config auto || true
+        env:
+          SEMGREP_RULES: >-
+            p/default
+            p/security-audit
+            p/secrets
+
+      - name: Upload Semgrep SARIF as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-sarif-results
+          path: semgrep-results.sarif
+          retention-days: 30
